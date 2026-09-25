@@ -20,4 +20,4 @@ Requisitos: Node.js 22 o superior y PostgreSQL.
 
 ## Despliegue
 
-Netlify ejecuta la migración de PostgreSQL antes de compilar. Configura las cuatro variables anteriores en el sitio y conecta la rama `main` para producción. La rama `dev` queda disponible para desarrollo y despliegues de prueba.
+Configura las cuatro variables anteriores en Netlify y ejecuta `npm run db:migrate` una vez contra la base PostgreSQL de producción. Conecta la rama `main` para producción; la rama `dev` queda disponible para desarrollo y despliegues de prueba.
