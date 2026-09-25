@@ -5,8 +5,20 @@ export async function POST(request: Request) {
   const form = await request.formData();
   const email = String(form.get("email") ?? "").trim().toLowerCase();
   const password = String(form.get("password") ?? "");
-  const users = await db().query<{ id: number; email: string; name: string; password_hash: string; password_salt: string }>("SELECT id::int, email, name, password_hash, password_salt FROM admin_users WHERE email=$1 AND active=true", [email]);
-  const user = users.rows[0];
+  type LoginUser = { id: number; email: string; name: string; password_hash: string; password_salt: string };
+  let users = await db().query<LoginUser>("SELECT id::int, email, name, password_hash, password_salt FROM admin_users WHERE email=$1 AND active=true", [email]);
+  let user = users.rows[0];
+  const bootstrapEmail = (process.env.ADMIN_EMAIL || "admin@petala.pe").trim().toLowerCase();
+  if (!user && process.env.ADMIN_PASSWORD && email === bootstrapEmail && password === process.env.ADMIN_PASSWORD) {
+    const salt = createSessionToken().slice(0, 22);
+    const passwordHash = await hashPassword(password, salt);
+    await db().query(
+      "INSERT INTO admin_users (email, name, password_hash, password_salt) VALUES ($1, $2, $3, $4) ON CONFLICT (email) DO NOTHING",
+      [email, process.env.ADMIN_NAME || "Administrador Petala", passwordHash, salt],
+    );
+    users = await db().query<LoginUser>("SELECT id::int, email, name, password_hash, password_salt FROM admin_users WHERE email=$1 AND active=true", [email]);
+    user = users.rows[0];
+  }
   const valid = user && await hashPassword(password, user.password_salt) === user.password_hash;
   if (!valid) return Response.redirect(new URL("/login?error=1", request.url), 303);
 
